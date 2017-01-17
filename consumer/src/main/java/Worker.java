@@ -9,9 +9,9 @@ import com.rabbitmq.client.Envelope;
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
-public class Recv {
+public class Worker {
 
-    private final static String QUEUE_NAME = "hello";
+    private final static String QUEUE_NAME = "task_queue";
 
     public static void main(String[] argv)
             throws IOException, InterruptedException, TimeoutException {
@@ -19,10 +19,12 @@ public class Recv {
         ConnectionFactory factory = new ConnectionFactory();
         factory.setHost("localhost");
         Connection connection = factory.newConnection();
-        Channel channel = connection.createChannel();
+        final Channel channel = connection.createChannel();
 
-        channel.queueDeclare(QUEUE_NAME, false, false, false, null);
+        channel.queueDeclare(QUEUE_NAME, true, false, false, null);
         System.out.println(" [*] Waiting for messages. To exit press CTRL+C");
+
+        channel.basicQos(1); // Accept only one unack-ed message at a time.
 
         Consumer consumer = new DefaultConsumer(channel) {
             @Override
@@ -31,9 +33,29 @@ public class Recv {
                     throws IOException {
                 String message = new String(body, "UTF-8");
                 System.out.println(" [x] Received '" + message + "'");
+                try {
+                    doWork(message);
+                }
+                finally {
+                    System.out.println(" [x] Done");
+                    channel.basicAck(envelope.getDeliveryTag(), false);
+                }
             }
         };
-        channel.basicConsume(QUEUE_NAME, true, consumer);
+        boolean autoAck = false; // If it's false it turns message acknowledgments on.
+        channel.basicConsume(QUEUE_NAME, autoAck, consumer);
     }
 
+    private static void doWork(String task) {
+        for (char ch : task.toCharArray()) {
+            if (ch == '.') {
+                try {
+                    Thread.sleep(1000);
+                }
+                catch (InterruptedException _ignored) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
+    }
 }
