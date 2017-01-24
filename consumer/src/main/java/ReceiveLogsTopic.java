@@ -9,9 +9,9 @@ import com.rabbitmq.client.Envelope;
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
-public class ReceiveLogsDirect {
+public class ReceiveLogsTopic {
 
-    private static final String EXCHANGE_NAME = "direct_logs";
+    private static final String EXCHANGE_NAME = "topic_logs";
 
     public static void main(String[] argv)
             throws IOException, InterruptedException, TimeoutException {
@@ -21,11 +21,11 @@ public class ReceiveLogsDirect {
         Connection connection = factory.newConnection();
         final Channel channel = connection.createChannel();
 
-        channel.exchangeDeclare(EXCHANGE_NAME, "direct");
+        channel.exchangeDeclare(EXCHANGE_NAME, "topic");
         String queueName = channel.queueDeclare().getQueue();
 
         if (argv.length < 1) {
-            System.err.println("Usage: ReceiveLogsDirect [info] [warning] [error]");
+            System.err.println("Usage: ReceiveLogsTopic [binding-key]...");
             System.exit(1);
         }
 
